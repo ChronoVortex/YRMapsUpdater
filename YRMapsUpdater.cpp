@@ -6,11 +6,6 @@
 
 // Compile with g++ -std=c++17 -o YRMapsUpdater.exe YRMapsUpdater.cpp -lws2_32
 
-/* TODO:
-- line 281, ask user if they want to delete the old version instead of just aborting
-- set up INI file to save all the directories the program requires
-*/
-
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -179,38 +174,63 @@ fs::path path_check_exists(const fs::path& dir, const std::string& fname) {
 	return path;
 }
 
+const fs::path pathsIniPath = program_path()/"PathsYRMU.ini";
 const fs::path mapsPathRelative("Maps\\Yuri's Revenge");
 
 int main(int argc, const char** argv) {
-	// bail if we didn't get the correct number of arguments
-	if (argc != 2) {
-		std::cout << "Usage: YRMapsUpdater.exe [full path to CnCNet]" << std::endl;
-		return 1;
-	}
+	// we'll use this buffer to get the string from GetPrivateProfileString every time we use it
+	char buffer[BUFFSIZE];
 	
-	// get paths from argument
-	const fs::path cncnetPath = fs::path(argv[1]);
-	const fs::path mapsPathFull = cncnetPath/mapsPathRelative;
-	const fs::path mpmapsOldPath = cncnetPath/"INI\\MPMaps.ini";
-	// bail if any path is invalid
-	if (!(fs::exists(cncnetPath) && fs::exists(mapsPathFull) && fs::exists(mpmapsOldPath))) {
-		std::cout << "Usage: YRMapsUpdater.exe [full path to CnCNet]" << std::endl;
-		return 1;
+	// create PathsYRMU.ini to save required paths if it doesn't already exists
+	if (!fs::exists(pathsIniPath))
+		std::ofstream(pathsIniPath).close();
+	// prevent it from being moved while the program is running
+	std::ifstream pathsIniPathOpen(pathsIniPath);
+	
+	// get cncnet path from PathsYRMU.ini
+	fs::path ptmp1(std::string(buffer, GetPrivateProfileString(
+		"PATHS", "CNCNET", NULLSTR, buffer, BUFFSIZE, pathsIniPath)));
+	auto ptmp2 = ptmp1/mapsPathRelative;
+	auto ptmp3 = ptmp1/"INI\\MPMaps.ini";
+	if (!(fs::exists(ptmp1) && fs::exists(ptmp2) && fs::exists(ptmp3))) {
+		std::cout << "Enter full path to CnCNet: " << std::endl;
+		std::string newPath;
+		std::getline(std::cin >> std::ws, newPath);
+		ptmp1 = fs::path(newPath);
+		ptmp2 = ptmp1/mapsPathRelative;
+		ptmp3 = ptmp1/"INI\\MPMaps.ini";
+		while (!(fs::exists(ptmp1) && fs::exists(ptmp2) && fs::exists(ptmp3))) {
+			std::cout << "CnCNet directories not found, enter full path to CnCNet: " << std::endl;
+			std::getline(std::cin >> std::ws, newPath);
+			ptmp1 = fs::path(newPath);
+			ptmp2 = ptmp1/mapsPathRelative;
+			ptmp3 = ptmp1/"INI\\MPMaps.ini";
+		}
+		WritePrivateProfileString("PATHS", "CNCNET", ptmp1.string(), pathsIniPath);
 	}
+	const fs::path cncnetPath    = ptmp1;
+	const fs::path mapsPathFull  = ptmp2;
+	const fs::path mpmapsOldPath = ptmp3;
 	
 	// list new maps for versionconfig.ini
 	std::cout << "Would like to create a list of new maps and previews? [y/N] ";
 	if (get_yes_no()) {
-		// open config file
-		std::cout << "Enter full path to versionconfig.ini:" << std::endl;
-		std::string configPath;
-		std::getline(std::cin >> std::ws, configPath);
-		std::ifstream config(configPath);
-		while (config.fail() || fs::path(configPath).filename() != "versionconfig.ini") {
-			std::cout << "Invalid path, please try again:" << std::endl;
-			std::getline(std::cin >> std::ws, configPath);
-			config = std::ifstream(configPath);
+		// get versionconfig.ini path from PathsYRMU.ini
+		fs::path configPath(std::string(buffer, GetPrivateProfileString(
+			"PATHS", "VCONFIG", NULLSTR, buffer, BUFFSIZE, pathsIniPath)));
+		if (!(fs::exists(configPath) && configPath.filename() == "versionconfig.ini")) {
+			std::cout << "Enter full path to versionconfig.ini:" << std::endl;
+			std::string newPath;
+			std::getline(std::cin >> std::ws, newPath);
+			configPath = fs::path(newPath);
+			while (!(fs::exists(configPath) && configPath.filename() == "versionconfig.ini")) {
+				std::cout << "Invalid path, please try again:" << std::endl;
+				std::getline(std::cin >> std::ws, newPath);
+				configPath = fs::path(newPath);
+			}
+			WritePrivateProfileString("PATHS", "VCONFIG", configPath.string(), pathsIniPath);
 		}
+		std::ifstream config(configPath);
 		
 		// read map and preview entries from config into a vector
 		std::vector<std::string> configEntries;
@@ -237,7 +257,6 @@ int main(int argc, const char** argv) {
 	}
 	
 	// getting everything we need for MPMaps
-	char buffer[BUFFSIZE]; // we'll use this buffer to get the string from GetPrivateProfileString every time we use it
 	const fs::path mpmapsPath = program_path()/"MPMaps.ini";
 	
 	// read map names and paths into an std::map to sort by player number, followed by map title
@@ -462,10 +481,15 @@ int main(int argc, const char** argv) {
 		out << s << std::endl;
 	out.close();
 	
-	// tell the user we're done and return success.
-	std::cout << "MPMaps.ini has been built.";
+	// tell the user we're done
+	std::cout << "MPMaps.ini has been built";
 	if (!notes.empty())
-		std::cout << " Notes on missing data were written to the end of the file.";
+		std::cout << ", notes on missing data were written to the end of the file";
 	std::cout << std::endl;
+	
+	// wait for input to return success
+	std::cout << "Press [Enter] to exit" << std::endl;
+	std::cin.get();
+	pathsIniPathOpen.close();
 	return 0;
 }

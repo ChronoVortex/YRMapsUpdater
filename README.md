@@ -4,7 +4,9 @@
 
 ### Usage
 
-To run, open command prompt, cd to the application's directory and enter `YRMapsUpdater.exe [full path to CnCNet]`.
+Double-click the executable to run as normal. The first time you run it, you will be prompted to input the path to CnCNet and, if you choose to create a list of new maps and previews, versionconfig.ini. Once you input these paths they will be saved, and unless you move or delete PathsYRMU.ini, you will not be prompted to input them again.
+
+If MPMapsBase.ini is not in the same directory as the executable, you will be prompted to input its correct path. This will not be saved, so it is recommended that you keep MPMapsBase.ini in the same directory as the executable.
 
 ### MPMaps.ini Generation
 
