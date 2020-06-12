@@ -2,6 +2,10 @@
 
 `YRMapsUpdater` is a command-line tool which facilitates map updates to the CnCNet Client for Yuri's Revenge. It's primary function is to read data from all maps and MPMaps.ini in order to generate a new MPMaps.ini configuration file. It also provides the option to create a list of all maps missing from versionconfig.ini.
 
+### Usage
+
+To run, open command prompt, cd to the application's directory and enter `YRMapsUpdater.exe [full path to CnCNet]`.
+
 ### MPMaps.ini Generation
 
 `YRMapsUpdater` requires maps to have a valid name in order to process them. It searches both the map itself (using the key "Name" under the section [Basic]) and the map's section in the original MPMaps.ini (using the key "Description") for a valid name. Name validity is determined by the regular expression `\[\d\] \S.+`.
