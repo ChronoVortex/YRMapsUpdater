@@ -7,7 +7,6 @@
 // Compile with g++ -std=c++17 -o YRMapsUpdater.exe YRMapsUpdater.cpp -lws2_32
 
 /* TODO:
-- make default filenames for all output files (e.g. "YRMapsUpdater_versionconfig.txt"), create function to check if they already exist and ask for overwrite
 - line 281, ask user if they want to delete the old version instead of just aborting
 - set up INI file to save all the directories the program requires
 */
@@ -55,8 +54,7 @@ bool get_yes_no() {
  * @return true if 's' begins with 'start', false if not.
  */
 bool str_startswith(const std::string& s, const std::string& start) {
-    return (s.length() >= start.length()) ?
-		(s.compare(0, start.length(), start) == 0) : false;
+    return (s.length() >= start.length()) ? (s.compare(0, start.length(), start) == 0) : false;
 }
 
 /**
@@ -159,6 +157,28 @@ std::pair<int, int> png_getsize(const fs::path& pngPath) {
 	return std::pair<int, int>(ntohl(width), ntohl(height));
 }
 
+/**
+ * Check if the file exists before settiling on a path,
+ * give user the option to rename if it does.
+ *
+ * @param dir directory for the file.
+ * @param fname name of the file.
+ * @return path to the file.
+ */
+fs::path path_check_exists(const fs::path& dir, const std::string& fname) {
+	auto path = dir/fname;
+	if (fs::exists(path)) {
+		std::cout << path.string() << " already exists, would you like to replace it? [y/N] ";
+		if (!get_yes_no()) {
+			std::cout << "Please enter an alternate filename: " << std::endl;
+			std::string newFname;
+			std::getline(std::cin >> std::ws, newFname);
+			return path_check_exists(dir, newFname);
+		}
+	}
+	return path;
+}
+
 const fs::path mapsPathRelative("Maps\\Yuri's Revenge");
 
 int main(int argc, const char** argv) {
@@ -192,11 +212,6 @@ int main(int argc, const char** argv) {
 			config = std::ifstream(configPath);
 		}
 		
-		// get an output filename from user
-		std::cout << "Enter name for output file:" << std::endl;
-		std::string fname;
-		std::getline(std::cin >> std::ws, fname);
-		
 		// read map and preview entries from config into a vector
 		std::vector<std::string> configEntries;
 		std::string line; 
@@ -206,7 +221,7 @@ int main(int argc, const char** argv) {
 		config.close();
 		
 		// read all maps, output to file if not in config entries
-		fs::path outPath = program_path()/fname;
+		fs::path outPath = path_check_exists(program_path(), "versionconfig_missing.txt");
 		std::ofstream newMaps(outPath);
 		for (const auto& e : fs::recursive_directory_iterator(mapsPathFull)) {
 			fs::path dirEntry = e.path();
@@ -260,10 +275,8 @@ int main(int argc, const char** argv) {
 		}
 	}
 	if (!missing.empty()) { // if any maps were missing names, write them all to a file
-		std::cout << "Unable to find valid names for " << missing.size() << " maps, enter name for output file:" << std::endl;
-		std::string fname;
-		std::getline(std::cin >> std::ws, fname);
-		fs::path outPath = program_path()/fname;
+		std::cout << "Unable to find valid names for " << missing.size() << " maps" << std::endl;
+		fs::path outPath = path_check_exists(program_path(), "map_names_missing.txt");
 		std::ofstream missingMaps(outPath);
 		for (const std::string& s : missing)
 			missingMaps << s << std::endl;
@@ -284,12 +297,14 @@ int main(int argc, const char** argv) {
 		std::getline(std::cin >> std::ws, inputTemp);
 		mpmapsBasePath = fs::path(inputTemp);
 	}
-	try {
-		fs::copy(mpmapsBasePath, mpmapsPath);
-	} catch (fs::filesystem_error& e) {
-		std::cout << e.what() << std::endl;
-		return 1;
+	if (fs::exists(mpmapsPath)) {
+		std::cout << mpmapsPath.string() << " already exists, would you like to delete it? [y/N] ";
+		if (get_yes_no())
+			fs::remove(mpmapsPath);
+		else
+			return 0;
 	}
+	fs::copy(mpmapsBasePath, mpmapsPath);
 	
 	// HERE WE GO, BITCHES!!!!!!
 	std::cout << "Building MPMaps.ini..." << std::endl;
