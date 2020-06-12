@@ -235,7 +235,7 @@ int main(int argc, const char** argv) {
 		if (dirEntry.extension() == ".map") {
 			// start looking for the name in the map itself
 			std::string mapTitle(buffer, GetPrivateProfileString(
-				"Basic", "Name", NULLSTR, buffer, BUFFSIZE, dirEntry.string()));
+				"Basic", "Name", NULLSTR, buffer, BUFFSIZE, dirEntry));
 			if (std::regex_match(mapTitle, titlePattern)) {
 				mapPathsOrdered[mapTitle + dirEntry.string()] = dirEntry; // add directory to key in case maps have the same name
 				continue;
@@ -247,7 +247,7 @@ int main(int argc, const char** argv) {
 				dirEntry.string(), cncnetPath.string().length()+1, 4);
 			// get new map name and validate
 			std::string mapTitleMP(buffer, GetPrivateProfileString(
-				mapSection, "Description", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string()));
+				mapSection, "Description", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 			if (std::regex_match(mapTitleMP, titlePattern)) {
 				mapPathsOrdered[mapTitleMP + dirEntry.string()] = dirEntry;
 				continue;
@@ -305,42 +305,38 @@ int main(int argc, const char** argv) {
 		
 		// write MultiMaps entry
 		std::string mapSection = str_cutends(mapPath.string(), cncnetPath.string().length()+1, 4);
-		WritePrivateProfileString("MultiMaps", std::to_string(multiMapsIndex++), mapSection, mpmapsPath.string());
+		WritePrivateProfileString("MultiMaps", std::to_string(multiMapsIndex++), mapSection, mpmapsPath);
 		
 		// write map name (can be taken from key by removing directory)
 		std::string mapTitle = str_cutends(key, 0, mapPath.string().length());
-		WritePrivateProfileString(mapSection, "Description", mapTitle, mpmapsPath.string());
+		WritePrivateProfileString(mapSection, "Description", mapTitle, mpmapsPath);
 		
 		// write author
-		std::string mapAuthor(buffer, GetPrivateProfileString(
-			"Basic", "Author", NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+		std::string mapAuthor(buffer, GetPrivateProfileString("Basic", "Author", NULLSTR, buffer, BUFFSIZE, mapPath));
 		if (mapAuthor == NULLSTR) {
 			// author not in map, check old MPMaps
-			mapAuthor = std::string(buffer, GetPrivateProfileString(
-				mapSection, "Author", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string()));
+			mapAuthor = std::string(buffer, GetPrivateProfileString(mapSection, "Author", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 			if (mapAuthor == NULLSTR) {
 				// author not in old MPMaps, set defaut and make note
 				notes.push_back("; " + mapSection + " missing Author, set to \"Unknown Author\"");
 				mapAuthor = "Unknown Author";
 			}
 		}
-		WritePrivateProfileString(mapSection, "Author", mapAuthor, mpmapsPath.string());
+		WritePrivateProfileString(mapSection, "Author", mapAuthor, mpmapsPath);
 		
 		// write briefing if we can find it
-		std::string mapBrief(buffer, GetPrivateProfileString(
-				"Basic", "Briefing", NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+		std::string mapBrief(buffer, GetPrivateProfileString("Basic", "Briefing", NULLSTR, buffer, BUFFSIZE, mapPath));
 		if (mapBrief == NULLSTR || std::regex_match(mapBrief, badBriefPattern)) // valid briefing not in map, check old MPMaps
-			mapBrief = std::string(buffer, GetPrivateProfileString(
-				mapSection, "Briefing", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string()));
+			mapBrief = std::string(buffer, GetPrivateProfileString(mapSection, "Briefing", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 		if (mapBrief != NULLSTR)
-			WritePrivateProfileString(mapSection, "Briefing", mapBrief, mpmapsPath.string());
+			WritePrivateProfileString(mapSection, "Briefing", mapBrief, mpmapsPath);
 		
 		// write gamemodes, prioritize old MPMaps for this one 'cause lots of maps don't have the correct gamemodes set
 		std::string mapModes(buffer, GetPrivateProfileString(
-			mapSection, "GameModes", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string()));
+			mapSection, "GameModes", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 		if (mapModes == NULLSTR) // gamemodes not found in old MPMapsn check map
 			mapModes = std::string(buffer, GetPrivateProfileString(
-				"Basic", "GameMode", NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+				"Basic", "GameMode", NULLSTR, buffer, BUFFSIZE, mapPath));
 		if (mapModes == NULLSTR) { // gamemodes not found in map, set default and make note
 			notes.push_back("; " + mapSection + " missing GameModes, set to \"Battle\"");
 			mapModes = "Battle";
@@ -350,29 +346,29 @@ int main(int argc, const char** argv) {
 		if (pos != std::string::npos)
 			mapModes.replace(pos, 8, "battle");
 		mapModes = str_titlecase(mapModes);
-		WritePrivateProfileString(mapSection, "GameModes", mapModes, mpmapsPath.string());
+		WritePrivateProfileString(mapSection, "GameModes", mapModes, mpmapsPath);
 		
 		// write coop info if map is coop
 		bool mapIsCoop = mapModes.find("Cooperative") != std::string::npos ||
 			std::string(buffer, GetPrivateProfileString(
-			mapSection, "IsCoopMission", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string())) == "yes";
+			mapSection, "IsCoopMission", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath)) == "yes";
 		std::vector<int> coopEnemyWaypnts; // we need a list of waypoints the player can't choose for when we write them
 		const std::basic_regex enemyHousePattern("^(\\d+,\\d+,\\d+)\\s*;?.*$"); // regex for enemy house entry values
 		if (mapIsCoop) { // lots of falling back on MPMaps and making missing data notes here, you know the drill
 			// duh
-			WritePrivateProfileString(mapSection, "IsCoopMission", "yes", mpmapsPath.string());
+			WritePrivateProfileString(mapSection, "IsCoopMission", "yes", mpmapsPath);
 			
 			// write sides and colors player is now allowed to choose
 			for (std::string bannedKey : {"DisallowedPlayerSides", "DisallowedPlayerColors"}) {
 				std::string mapBannedItems(buffer, GetPrivateProfileString(
-					"CoopInfo", bannedKey, NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+					"CoopInfo", bannedKey, NULLSTR, buffer, BUFFSIZE, mapPath));
 				if (mapBannedItems == NULLSTR)
 					mapBannedItems = std::string(buffer, GetPrivateProfileString(
-						mapSection, bannedKey, NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string()));
+						mapSection, bannedKey, NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 				if (mapBannedItems == NULLSTR) {
 					notes.push_back("; " + mapSection + " missing " + bannedKey);
 				} else {
-					WritePrivateProfileString(mapSection, bannedKey, mapBannedItems, mpmapsPath.string());
+					WritePrivateProfileString(mapSection, bannedKey, mapBannedItems, mpmapsPath);
 				}
 			}
 			
@@ -380,11 +376,11 @@ int main(int argc, const char** argv) {
 			size_t enemyHouseNum = 0;
 			bool useMP = false;
 			std::string mapEnemyHouse(buffer, GetPrivateProfileString(
-				"CoopInfo", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+				"CoopInfo", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath));
 			if (!std::regex_match(mapEnemyHouse, enemyHousePattern)) {
 				useMP = true;
 				mapEnemyHouse = std::string(buffer, GetPrivateProfileString(
-					mapSection, "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string()));
+					mapSection, "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 			}
 			if (!std::regex_match(mapEnemyHouse, enemyHousePattern)) {
 				notes.push_back("; " + mapSection + " missing EnemyHouse entries (this has affected Waypoint entires as well)");
@@ -395,12 +391,12 @@ int main(int argc, const char** argv) {
 					// last character of mapEnemyHouse is the waypoint for the enemy house
 					coopEnemyWaypnts.push_back(mapEnemyHouse[mapEnemyHouse.size()-1] - '0');
 					WritePrivateProfileString(
-						mapSection, "EnemyHouse" + std::to_string(enemyHouseNum++), mapEnemyHouse, mpmapsPath.string());
+						mapSection, "EnemyHouse" + std::to_string(enemyHouseNum++), mapEnemyHouse, mpmapsPath);
 					mapEnemyHouse = (useMP) ?
 						std::string(buffer, GetPrivateProfileString(
-						mapSection, "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mpmapsOldPath.string())) :
+						mapSection, "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mpmapsOldPath)) :
 						std::string(buffer, GetPrivateProfileString(
-						"CoopInfo", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+						"CoopInfo", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath));
 				}
 			}
 		}
@@ -408,38 +404,38 @@ int main(int argc, const char** argv) {
 		// write min/max players, EnforceMaxPlayers and starting waypoints, base on coop info if map is coop
 		size_t itterWaypnt = 0;
 		std::string mapWaypnt(buffer, GetPrivateProfileString(
-			"Waypoints", std::to_string(itterWaypnt), NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+			"Waypoints", std::to_string(itterWaypnt), NULLSTR, buffer, BUFFSIZE, mapPath));
 		while (itterWaypnt <= 8 && mapWaypnt != NULLSTR) {
 			// only write if this waypoint doesn't belong to an enemy in coop
 			if (std::find(coopEnemyWaypnts.begin(), coopEnemyWaypnts.end(), itterWaypnt) == coopEnemyWaypnts.end())
 				WritePrivateProfileString(
-					mapSection, "Waypoint" + std::to_string(itterWaypnt), mapWaypnt, mpmapsPath.string());
+					mapSection, "Waypoint" + std::to_string(itterWaypnt), mapWaypnt, mpmapsPath);
 			++itterWaypnt;
 			mapWaypnt = std::string(buffer, GetPrivateProfileString(
-				"Waypoints", std::to_string(itterWaypnt), NULLSTR, buffer, BUFFSIZE, mapPath.string()));
+				"Waypoints", std::to_string(itterWaypnt), NULLSTR, buffer, BUFFSIZE, mapPath));
 		}
-		WritePrivateProfileString(mapSection, "MinPlayers", "2", mpmapsPath.string());
+		WritePrivateProfileString(mapSection, "MinPlayers", "2", mpmapsPath);
 		WritePrivateProfileString(
-			mapSection, "MaxPlayers", std::to_string(itterWaypnt - coopEnemyWaypnts.size()), mpmapsPath.string());
-		WritePrivateProfileString(mapSection, "EnforceMaxPlayers", "True", mpmapsPath.string());
+			mapSection, "MaxPlayers", std::to_string(itterWaypnt - coopEnemyWaypnts.size()), mpmapsPath);
+		WritePrivateProfileString(mapSection, "EnforceMaxPlayers", "True", mpmapsPath);
 		
 		// get ForcedOptions from map, write it as ForcedOptions-mapname in MPMaps
-		if (GetPrivateProfileSection("ForcedOptions", buffer, BUFFSIZE, mapPath.string())) {
+		if (GetPrivateProfileSection("ForcedOptions", buffer, BUFFSIZE, mapPath)) {
 			std::string forcedOptionsName = "ForcedOptions-" + mapSection;
-			WritePrivateProfileString(mapSection, "ForcedOptions", forcedOptionsName, mpmapsPath.string());
-			WritePrivateProfileSection(forcedOptionsName, buffer, mpmapsPath.string());
+			WritePrivateProfileString(mapSection, "ForcedOptions", forcedOptionsName, mpmapsPath);
+			WritePrivateProfileSection(forcedOptionsName, buffer, mpmapsPath);
 		}
 		
 		// write map sizes and preview size
 		WritePrivateProfileString(mapSection, "Size", std::string(buffer, GetPrivateProfileString(
-			"Map", "Size", NULLSTR, buffer, BUFFSIZE, mapPath.string())), mpmapsPath.string());
+			"Map", "Size", NULLSTR, buffer, BUFFSIZE, mapPath)), mpmapsPath);
 		WritePrivateProfileString(mapSection, "LocalSize", std::string(buffer, GetPrivateProfileString(
-			"Map", "LocalSize", NULLSTR, buffer, BUFFSIZE, mapPath.string())), mpmapsPath.string());
+			"Map", "LocalSize", NULLSTR, buffer, BUFFSIZE, mapPath)), mpmapsPath);
 		std::pair<int, int> mapPreviewSize;
 		try {
 			auto mapPreviewSize = png_getsize(fs::path(mapPath).replace_extension(".png"));
 			WritePrivateProfileString(mapSection, "PreviewSize",
-				std::to_string(mapPreviewSize.first) + ',' + std::to_string(mapPreviewSize.second), mpmapsPath.string());
+				std::to_string(mapPreviewSize.first) + ',' + std::to_string(mapPreviewSize.second), mpmapsPath);
 		} catch (std::invalid_argument& e) { // couldn't find png preview, make note
 			notes.push_back("; " + mapSection + " missing PreviewSize");
 		}
