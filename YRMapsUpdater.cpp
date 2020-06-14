@@ -345,11 +345,11 @@ int main(int argc, const char** argv) {
 		std::string mapTitle = str_cutends(key, 0, mapPath.string().length());
 		WritePrivateProfileString(mapSection, "Description", mapTitle, mpmapsPath);
 		
-		// write author
-		std::string mapAuthor(buffer, GetPrivateProfileString("Basic", "Author", NULLSTR, buffer, BUFFSIZE, mapPath));
+		// write author, prioritize old MPMaps for this one so maps don't need authors updated individually
+		std::string mapAuthor(buffer, GetPrivateProfileString(mapSection, "Author", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 		if (mapAuthor == NULLSTR) {
-			// author not in map, check old MPMaps
-			mapAuthor = std::string(buffer, GetPrivateProfileString(mapSection, "Author", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
+			// author not in old MPMaps, check map
+			mapAuthor = std::string(buffer, GetPrivateProfileString("Basic", "Author", NULLSTR, buffer, BUFFSIZE, mapPath));
 			if (mapAuthor == NULLSTR) {
 				// author not in old MPMaps, set defaut and make note
 				notes.push_back("; " + mapSection + " missing Author, set to \"Unknown Author\"");
