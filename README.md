@@ -8,6 +8,8 @@ Double-click the executable to run as normal. The first time you run it, you wil
 
 If MPMapsBase.ini is not in the same directory as the executable, you will be prompted to input its correct path. This will not be saved, so it is recommended that you keep MPMapsBase.ini in the same directory as the executable.
 
+THE APPLICATION DOES NOT RECOGNIZE UNICODE CHARACTERS. Directories which have accented characters in their names will not be recognized as valid. Before you run the application, ensure that its directory and your CnCNet directory are free of accented characters.
+
 ### MPMaps.ini Generation
 
 `YRMapsUpdater` requires maps to have a valid name in order to process them. It searches both the map itself (using the key "Name" under the section [Basic]) and the map's section in the original MPMaps.ini (using the key "Description") for a valid name. Name validity is determined by the regular expression `\[\d\] \S.+`.

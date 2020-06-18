@@ -395,8 +395,7 @@ int main(int argc, const char** argv) {
 		std::vector<int> coopEnemyWaypnts; // we need a list of waypoints the player can't choose for when we write them
 		const std::basic_regex enemyHousePattern("^(\\d+,\\d+,\\d+)\\s*;?.*$"); // regex for enemy house entry values
 		if (mapIsCoop) { // lots of falling back on MPMaps and making missing data notes here, you know the drill
-			// duh
-			WritePrivateProfileString(mapSection, "IsCoopMission", "yes", mpmapsPath);
+			WritePrivateProfileString(mapSection, "IsCoopMission", "yes", mpmapsPath); // duh
 
 			// write sides and colors player is now allowed to choose
 			for (std::string bannedKey : {"DisallowedPlayerSides", "DisallowedPlayerColors"}) {
@@ -479,7 +478,7 @@ int main(int argc, const char** argv) {
 			WritePrivateProfileString(mapSection, "PreviewSize",
 				std::to_string(mapPreviewSize.first) + ',' + std::to_string(mapPreviewSize.second), mpmapsPath);
 		}
-		catch (std::invalid_argument& e) { // couldn't find png preview, make note
+		catch (std::invalid_argument) { // couldn't find png preview, make note
 			notes.push_back("; " + mapSection + " missing PreviewSize");
 		}
 	}
