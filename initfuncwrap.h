@@ -4,8 +4,7 @@
  * @author Chrono Vortex#9916@Discord
  */
 
-#ifndef INITFUNCWRAP_H
-#define INITFUNCWRAP_H
+#pragma once
 
 #include <windows.h>
 #include <filesystem>
@@ -25,5 +24,3 @@ DWORD GetPrivateProfileSection(const std::string& lpAppName, char* lpReturnedStr
 bool WritePrivateProfileSection(const std::string& lpAppName, const char* lpString, const std::filesystem::path& lpFileName) {
 	return WritePrivateProfileSectionA(lpAppName.c_str(), lpString, lpFileName.string().c_str());
 }
-
-#endif
