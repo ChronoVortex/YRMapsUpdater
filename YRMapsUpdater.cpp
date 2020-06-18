@@ -335,10 +335,13 @@ int main(int argc, const char** argv) {
 	// go through each map, add to [MultiMaps], and collect info for their individual sections
 	int multiMapsIndex = 0;
 	const std::basic_regex badBriefPattern("^Brief:(ALL|TRN)\\d{2}(md)?$"); // regex for bad briefings
+	time_t lastPrintTime = time(0); // timer for printing progress bar
 	for (auto const& [key, mapPath] : mapPathsOrdered) {
-		// periodically print progress bar
-		if (multiMapsIndex % 20 == 0)
+		// print progress bar every few seconds
+		if (difftime(time(0), lastPrintTime) >= 3) {
 			std::cout << progress_to_string(multiMapsIndex, mapPathsOrdered.size(), 70) << std::endl;
+			lastPrintTime = time(0);
+		}
 
 		// write MultiMaps entry
 		std::string mapSection = str_cutends(mapPath.string(), cncnetPath.string().length() + 1, 4);
