@@ -388,19 +388,25 @@ int main(int argc, const char** argv) {
 		mapModes = str_titlecase(mapModes);
 		WritePrivateProfileString(mapSection, "GameModes", mapModes, mpmapsPath);
 
-		// write coop info if map is coop
-		bool mapIsCoop = mapModes.find("Cooperative") != std::string::npos ||
-			std::string(buffer, GetPrivateProfileString(
-				mapSection, "IsCoopMission", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath)) == "yes";
-		std::vector<int> coopEnemyWaypnts; // we need a list of waypoints the player can't choose for when we write them
-		const std::basic_regex enemyHousePattern("^(\\d+,\\d+,\\d+)\\s*;?.*$"); // regex for enemy house entry values
-		if (mapIsCoop) { // lots of falling back on MPMaps and making missing data notes here, you know the drill
-			WritePrivateProfileString(mapSection, "IsCoopMission", "yes", mpmapsPath); // duh
+		// write coop info if map is coop, check map and MPMaps for IsCoopMission
+		std::string mapCoopVal(buffer, GetPrivateProfileString(
+			"Basic", "IsCoopMission", NULLSTR, buffer, BUFFSIZE, mapPath));
+		std::transform(mapCoopVal.begin(), mapCoopVal.end(), mapCoopVal.begin(), std::tolower);
+		std::string iniCoopVal(buffer, GetPrivateProfileString(
+			mapSection, "IsCoopMission", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
+		std::transform(iniCoopVal.begin(), iniCoopVal.end(), iniCoopVal.begin(), std::tolower);
+		std::vector<int> coopEnemyWaypnts; // we need a list of waypoints the player can't choose when we write starting waypoints
+		if (mapCoopVal == "yes" || mapCoopVal == "true" || iniCoopVal == "yes" || iniCoopVal == "true") {
+			// regex for enemy house entry values
+			const std::basic_regex enemyHousePattern("^(\\d+,\\d+,\\d+)\\s*;?.*$");
+			
+			// duh
+			WritePrivateProfileString(mapSection, "IsCoopMission", "yes", mpmapsPath);
 
 			// write sides and colors player is now allowed to choose
 			for (std::string bannedKey : {"DisallowedPlayerSides", "DisallowedPlayerColors"}) {
 				std::string mapBannedItems(buffer, GetPrivateProfileString(
-					"CoopInfo", bannedKey, NULLSTR, buffer, BUFFSIZE, mapPath));
+					"Basic", bannedKey, NULLSTR, buffer, BUFFSIZE, mapPath));
 				if (mapBannedItems == NULLSTR)
 					mapBannedItems = std::string(buffer, GetPrivateProfileString(
 						mapSection, bannedKey, NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
@@ -416,7 +422,7 @@ int main(int argc, const char** argv) {
 			size_t enemyHouseNum = 0;
 			bool useMP = false;
 			std::string mapEnemyHouse(buffer, GetPrivateProfileString(
-				"CoopInfo", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath));
+				"Basic", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath));
 			if (!std::regex_match(mapEnemyHouse, enemyHousePattern)) {
 				useMP = true;
 				mapEnemyHouse = std::string(buffer, GetPrivateProfileString(
@@ -427,17 +433,18 @@ int main(int argc, const char** argv) {
 			}
 			else {
 				while (enemyHouseNum <= 8 && mapEnemyHouse != NULLSTR) {
-					// strip comment from entry if there is one
-					mapEnemyHouse = std::regex_replace(mapEnemyHouse, enemyHousePattern, "$1");
-					// last character of mapEnemyHouse is the waypoint for the enemy house
-					coopEnemyWaypnts.push_back(mapEnemyHouse[mapEnemyHouse.size() - 1] - '0');
+					// strip comment from mapEnemyHouse if there is one,
+					// we need the last character to be the waypoint for the enemy house
+					auto mapEnemyHouseStripped = std::regex_replace(mapEnemyHouse, enemyHousePattern, "$1");
+					// last character of mapEnemyHouseStripped is the waypoint for the enemy house
+					coopEnemyWaypnts.push_back(mapEnemyHouseStripped[mapEnemyHouseStripped.size() - 1] - '0');
 					WritePrivateProfileString(
 						mapSection, "EnemyHouse" + std::to_string(enemyHouseNum++), mapEnemyHouse, mpmapsPath);
 					mapEnemyHouse = (useMP) ?
 						std::string(buffer, GetPrivateProfileString(
 							mapSection, "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mpmapsOldPath)) :
 						std::string(buffer, GetPrivateProfileString(
-							"CoopInfo", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath));
+							"Basic", "EnemyHouse" + std::to_string(enemyHouseNum), NULLSTR, buffer, BUFFSIZE, mapPath));
 				}
 			}
 		}
@@ -460,11 +467,14 @@ int main(int argc, const char** argv) {
 			mapSection, "MaxPlayers", std::to_string(itterWaypnt - coopEnemyWaypnts.size()), mpmapsPath);
 		WritePrivateProfileString(mapSection, "EnforceMaxPlayers", "True", mpmapsPath);
 
-		// get ForcedOptions from map, write it as ForcedOptions-mapname in MPMaps
-		if (GetPrivateProfileSection("ForcedOptions", buffer, BUFFSIZE, mapPath)) {
-			std::string forcedOptionsName = "ForcedOptions-" + mapSection;
-			WritePrivateProfileString(mapSection, "ForcedOptions", forcedOptionsName, mpmapsPath);
-			WritePrivateProfileSection(forcedOptionsName, buffer, mpmapsPath);
+		// get ForcedOptions and ForcedSpawnIniOptions from map,
+		// write it as ForcedOptions-mapname or ForcedSpawnIniOptions-mapname in MPMaps
+		for (std::string forcedKey : {"ForcedOptions", "ForcedSpawnIniOptions"}) {
+			if (GetPrivateProfileSection(forcedKey, buffer, BUFFSIZE, mapPath)) {
+				std::string forcedOptionsName = forcedKey + '-' + mapSection;
+				WritePrivateProfileString(mapSection, forcedKey, forcedOptionsName, mpmapsPath);
+				WritePrivateProfileSection(forcedOptionsName, buffer, mpmapsPath);
+			}
 		}
 
 		// write map sizes and preview size
