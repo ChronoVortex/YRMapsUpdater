@@ -1,6 +1,7 @@
 # Untracked files:
 /.vs
 /Debug
+/Release
 /YRMapsUpdater.sln
 /YRMapsUpdater.vcxproj
 /YRMapsUpdater.vcxproj.filters
