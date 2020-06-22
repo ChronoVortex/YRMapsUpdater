@@ -14,6 +14,7 @@
 #include <regex>
 #include <vector>
 #include <map>
+#include "eqor.h"
 #include "initfuncwrap.h"
 
 #define NULLSTR ""
@@ -396,7 +397,7 @@ int main(int argc, const char** argv) {
 			mapSection, "IsCoopMission", NULLSTR, buffer, BUFFSIZE, mpmapsOldPath));
 		std::transform(iniCoopVal.begin(), iniCoopVal.end(), iniCoopVal.begin(), std::tolower);
 		std::vector<int> coopEnemyWaypnts; // we need a list of waypoints the player can't choose when we write starting waypoints
-		if (mapCoopVal == "yes" || mapCoopVal == "true" || iniCoopVal == "yes" || iniCoopVal == "true") {
+		if (eqor(mapCoopVal, "yes", "true") || eqor(iniCoopVal, "yes", "true")) {
 			// regex for enemy house entry values
 			const std::basic_regex enemyHousePattern("^(\\d+,\\d+,\\d+)\\s*;?.*$");
 			
