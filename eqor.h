@@ -14,7 +14,7 @@
  * @return true 'a' is equal to any entry in 'values', false if not.
  */
 template <class Comparable>
-bool _eqor(Comparable a, std::initializer_list<Comparable> values) {
+bool _eqor(const Comparable& a, const std::initializer_list<Comparable>& values) {
 	for (Comparable e : values)
 		if (a == e)
 			return true;
